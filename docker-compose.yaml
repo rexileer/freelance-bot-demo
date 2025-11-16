@@ -1,0 +1,70 @@
+services:
+  main_bot:
+    build: .
+#    restart: always
+    container_name: main_bot
+    env_file: .env
+    entrypoint: /freelance_bot/entrypoint.sh
+    volumes:
+      - media:/freelance_bot/bot/media
+    depends_on:
+      postgres_db:
+        condition: service_started
+
+  mailing_bot:
+    build: .
+#    restart: always
+    container_name: mailing_bot
+    env_file: .env
+    command: python manage.py start_mailing
+    volumes:
+      - media:/freelance_bot/bot/media
+    depends_on:
+      - postgres_db
+
+  tg_parser:
+    build: .
+#    restart: always
+    container_name: tg_parser
+    env_file: .env
+    volumes:
+      - media:/freelance_bot/bot/media
+    command: python manage.py start_tg_parser
+    depends_on:
+      - postgres_db
+
+  django_admin:
+    build: .
+#    restart: always
+    container_name: django_admin
+    env_file: .env
+    volumes:
+      - media:/freelance_bot/bot/media
+    command: "python -m gunicorn \
+      --bind :8000 \
+      --workers 4 \
+      --capture-output \
+      --log-level info bot_admin.wsgi:application"
+    ports:
+      - '${DJANGO_PORT:-8000}:8000'
+    depends_on:
+      - postgres_db
+      - main_bot
+
+  postgres_db:
+    image: "postgres:15-alpine"
+    restart: always
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-qH6~*8tq&}
+      POSTGRES_DB: ${PG_NAME:-freelance_db}
+      POSTGRES_PORT: ${PG_PORT:-5432}
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    volumes:
+      - ./dump_file.sql:/docker-entrypoint-initdb.d/dump_file.sql
+
+volumes:
+  media:
+
