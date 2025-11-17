@@ -1,0 +1,2 @@
+-- Optional seed file for docker-compose.
+-- Leave as-is or replace with an SQL dump; the container will run it on first start.
